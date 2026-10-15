@@ -12,6 +12,7 @@ from collections.abc import Callable, Iterator
 
 import psycopg
 import pytest
+from psycopg import sql
 from psycopg.conninfo import make_conninfo
 
 from pacificorp_queue.db import migrate
@@ -34,10 +35,10 @@ def schema_dsn(pg_dsn: str) -> Iterator[str]:
     """A DSN whose search_path is a fresh, empty schema."""
     schema = f"pcq_test_{uuid.uuid4().hex[:12]}"
     with psycopg.connect(pg_dsn, autocommit=True) as admin:
-        admin.execute(f'CREATE SCHEMA "{schema}"')
+        admin.execute(sql.SQL("CREATE SCHEMA {}").format(sql.Identifier(schema)))
     yield make_conninfo(pg_dsn, options=f"-c search_path={schema}")
     with psycopg.connect(pg_dsn, autocommit=True) as admin:
-        admin.execute(f'DROP SCHEMA "{schema}" CASCADE')
+        admin.execute(sql.SQL("DROP SCHEMA {} CASCADE").format(sql.Identifier(schema)))
 
 
 @pytest.fixture

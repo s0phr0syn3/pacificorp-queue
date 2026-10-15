@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import date
 
 import psycopg
+from psycopg import sql
 from psycopg.types.json import Jsonb
 
 from pacificorp_queue.fetch import FetchedPage
@@ -14,17 +15,24 @@ from pacificorp_queue.sources import Source
 _COLUMNS = (*ENTRY_COLUMNS, "content_hash")
 _UPDATE_COLUMNS = [c for c in _COLUMNS if c not in ("as_of", "queue_number")]
 
-# Identifiers come from the dataclass definition, never from input. Values are
-# passed as one jsonb parameter and unnested server-side: one round trip for the
-# whole page, typed by the table's own column types.
-_UPSERT = f"""
-INSERT INTO queue_entry ({", ".join(_COLUMNS)})
-SELECT {", ".join(_COLUMNS)}
+# Identifiers come from the dataclass definition, never from input, and are quoted
+# by psycopg. Values are passed as one jsonb parameter and unnested server-side: one
+# round trip for the whole page, typed by the table's own column types.
+_UPSERT = sql.SQL(
+    """
+INSERT INTO queue_entry ({columns})
+SELECT {columns}
 FROM jsonb_populate_recordset(NULL::queue_entry, %s)
 ON CONFLICT (as_of, queue_number) DO UPDATE SET
-    {", ".join(f"{c} = EXCLUDED.{c}" for c in _UPDATE_COLUMNS)},
+    {assignments},
     updated_at = now()
 """
+).format(
+    columns=sql.SQL(", ").join(map(sql.Identifier, _COLUMNS)),
+    assignments=sql.SQL(", ").join(
+        sql.SQL("{0} = EXCLUDED.{0}").format(sql.Identifier(c)) for c in _UPDATE_COLUMNS
+    ),
+)
 
 
 class LoadError(RuntimeError):

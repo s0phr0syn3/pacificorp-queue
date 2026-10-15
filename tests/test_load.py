@@ -9,6 +9,7 @@ from pathlib import Path
 
 import psycopg
 import pytest
+from psycopg import sql
 
 from pacificorp_queue import fetch
 from pacificorp_queue.cli import main
@@ -26,7 +27,8 @@ Connect = Callable[[], psycopg.Connection]
 
 
 def count(conn: psycopg.Connection, table: str = "queue_entry") -> int:
-    row = conn.execute(f"SELECT count(*) FROM {table}").fetchone()  # noqa: S608
+    query = sql.SQL("SELECT count(*) FROM {}").format(sql.Identifier(table))
+    row = conn.execute(query).fetchone()
     assert row is not None
     return int(row[0])
 
