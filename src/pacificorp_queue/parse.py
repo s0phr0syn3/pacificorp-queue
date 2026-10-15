@@ -25,8 +25,8 @@ class ParseError(ValueError):
 @dataclass(frozen=True, slots=True)
 class ParsedPage:
     as_of: date
-    header: list[str]
-    rows: list[list[str]]
+    header: tuple[str, ...]
+    rows: tuple[tuple[str, ...], ...]
     skipped_rows: int  # banner, legend and spacer rows below the header
 
 
@@ -148,4 +148,9 @@ def parse_page(html: str) -> ParsedPage:
                 f"row {row[0]!r} has {len(row)} cells, header has {len(header)}"
             )
         skipped += 1
-    return ParsedPage(as_of=as_of, header=header, rows=data, skipped_rows=skipped)
+    return ParsedPage(
+        as_of=as_of,
+        header=tuple(header),
+        rows=tuple(tuple(r) for r in data),
+        skipped_rows=skipped,
+    )

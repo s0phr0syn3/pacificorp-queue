@@ -27,7 +27,7 @@ def test_real_page_structure() -> None:
 def test_serial_page_has_header_but_no_rows() -> None:
     page = parse_page(decode_html(fixture_bytes("sq")))
     assert page.as_of == date(2026, 9, 14)
-    assert page.rows == []
+    assert page.rows == ()
 
 
 def test_as_of_in_a_single_cell() -> None:
@@ -39,13 +39,13 @@ def test_header_is_found_by_content_not_position() -> None:
     banner = "<tr><td>banner</td></tr>" * 4
     html = _html(banner + HEADER + "<tr><td>C1-01</td><td>1/2/2020</td></tr>")
     page = parse_page(html)
-    assert page.header == ["Id", "Request Date"]
-    assert page.rows == [["C1-01", "1/2/2020"]]
+    assert page.header == ("Id", "Request Date")
+    assert page.rows == (("C1-01", "1/2/2020"),)
 
 
 def test_whitespace_and_nbsp_are_collapsed() -> None:
     html = _html(HEADER + "<tr><td>C1-01</td><td>&nbsp;1/2/\n 2020 </td></tr>")
-    assert parse_page(html).rows == [["C1-01", "1/2/ 2020"]]
+    assert parse_page(html).rows == (("C1-01", "1/2/ 2020"),)
 
 
 def test_row_that_looks_like_data_but_has_wrong_width_is_an_error() -> None:
