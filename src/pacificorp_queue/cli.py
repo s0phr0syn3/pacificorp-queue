@@ -9,7 +9,12 @@ from pathlib import Path
 import psycopg
 
 from pacificorp_queue.db import migrate
-from pacificorp_queue.fetch import FetchedPage, build_ssl_context, fetch_page
+from pacificorp_queue.fetch import (
+    FetchedPage,
+    FetchError,
+    build_ssl_context,
+    fetch_page,
+)
 from pacificorp_queue.pipeline import ingest_page
 from pacificorp_queue.sources import SOURCES, Source
 
@@ -82,7 +87,7 @@ def _connect(dsn: str) -> psycopg.Connection | None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Exit code: 0 ok, 1 a source failed, 2 bad usage or no database."""
+    """Exit code: 0 ok, 1 a source failed, 2 bad usage, no database or TLS setup."""
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s"
     )
@@ -107,7 +112,11 @@ def main(argv: list[str] | None = None) -> int:
             ", ".join(p.name for p in missing),
         )
         return 2
-    context = None if args.html_dir else build_ssl_context()
+    try:
+        context = None if args.html_dir else build_ssl_context()
+    except FetchError as exc:  # the bundled root CA does not match its pinned hash
+        log.error("%s", exc)
+        return 2
     if (conn := _connect(args.dsn)) is None:
         return 2
     failures = 0

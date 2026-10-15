@@ -10,6 +10,7 @@ from pathlib import Path
 import psycopg
 import pytest
 
+from pacificorp_queue import fetch
 from pacificorp_queue.cli import main
 from pacificorp_queue.db import migrate
 from pacificorp_queue.fetch import FetchedPage
@@ -262,6 +263,16 @@ def test_cli_reports_an_unreachable_database_in_one_line(
 ) -> None:
     assert main(["migrate", "--dsn", "postgresql://nobody@127.0.0.1:1/x"]) == 2
     assert "cannot connect to the database" in caplog.text
+    assert "Traceback" not in caplog.text
+
+
+def test_cli_reports_a_tampered_root_ca_in_one_line(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    monkeypatch.setattr(fetch, "PINNED_ROOT_SHA256", "00:" * 31 + "00")
+    args = ["load", "--dsn", "postgresql://nobody@127.0.0.1:1/x", "--source", "cs4"]
+    assert main(args) == 2
+    assert "fingerprint" in caplog.text
     assert "Traceback" not in caplog.text
 
 
