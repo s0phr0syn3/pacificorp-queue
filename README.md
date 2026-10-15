@@ -184,6 +184,13 @@ I left alone.
   `former_queue_numbers`). Not needed for this snapshot, since lineage is at most
   one hop; the array column and GIN index are there for it.
 - Scheduling, and alerting when a page's row count falls sharply between dates.
+- Concurrent loads of two different pages that contain the same queue number for the
+  same as-of date. Loads are serialized per source, and the check that rejects an id
+  already loaded from another page runs under that per-source lock, so two such loads
+  could both pass it and the second upsert would overwrite the first row. Sequential
+  loads (what the CLI does) are not affected, and one id on two pages would already be
+  a data anomaly. The fix is a global lock, or `WHERE queue_entry.source =
+  EXCLUDED.source` on the upsert.
 - A live fetch in CI. CI (`.github/workflows/ci.yml`) runs lint, `mypy --strict` and the
   full suite, including the Postgres 18 Testcontainers tests, on Python 3.12, 3.13 and
   3.14, but it does not hit PacifiCorp's server. The TLS chain was verified offline
