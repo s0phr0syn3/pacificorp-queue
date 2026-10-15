@@ -98,8 +98,8 @@ snapshot key, not the time the job ran.
 **Why no Alembic / ORM / pandas.** The schema is one SQL file applied by a
 small runner (`schema_migration` table, advisory-locked), the queries are a
 handful of plain statements, and the parser is one short module. That keeps the
-install to a single dependency. Alembic would be the first thing I add once there is a
-second migration worth reviewing.
+installation to a single dependency. Alembic would be the first thing I add once 
+there is a second migration worth reviewing.
 
 ## What the data taught me
 
@@ -173,7 +173,7 @@ I left alone.
   `T2-001`. It is the only parent in the data not marked as moved. It looks like
   an inconsistency in the source, and a test pins it so it cannot go unnoticed.
 - How agreement history in the free text (`LGIA executed 5/14/2026, suspended
-  5/18/2026`) should be modelled. It is kept as text.
+  5/18/2026`) should be modeled. It is kept as text.
 - Whether withdrawn-and-transferred requests should count towards "capacity in
   the queue". Counting both the parent and the T2 child would double count, which
   is why `moved_to_cluster` exists.
@@ -193,8 +193,14 @@ I left alone.
 - Actions are pinned to major versions, not commit SHAs.
 - Python 3.12, 3.13 and 3.14 passed the suite, `ruff` and `mypy --strict` locally against
   Postgres 18 before the CI matrix was added; the matrix is what keeps that true.
+- Other utilities. This tool is scoped to PacifiCorp on purpose. Extending it would take 
+  more than adding entries to sources.py: a Source would need to carry its utility and 
+  full URL, and queue_entry.source would need a utility column (or namespaced keys like 
+  ppw:cs4) so that keys can’t collide. The larger piece is normalize.py, whose header table
+  and vocabularies describe PacifiCorp’s columns and spellings. Each utility would need its 
+  own normalizer behind a small shared interface that returns QueueEntry. I haven’t built 
+  or tested code for any additional utilities.
 
 ## AI assistance
 
-This project was written with AI assistance (Claude), as the take-home
-instructions allow.
+This project was written with AI assistance (Claude), as the take-home instructions allow.
