@@ -178,8 +178,9 @@ the pages show, what I inferred, and what I left alone. The calls that matter mo
 ## AI assistance
 
 Claude (Anthropic) wrote the code and tests, working from a scope I set: PacifiCorp's
-six queue pages, one runtime dependency, Python 3.12, Postgres 18, and CI. I then went
-through the code file by file. Review found and fixed:
+six queue pages, one runtime dependency, Python 3.12, Postgres 18, and CI. I then
+reviewed the code and tests, starting with `sources`, `fetch` and `parse`, and ran the
+tool against the live site. Review found and fixed:
 
 - `fetch_page` did not retry a response body cut short, although its docstring said it
   did. It does now, with a test.
