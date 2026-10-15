@@ -1,0 +1,43 @@
+[project]
+name = "pacificorp-queue"
+version = "0.1.0"
+description = "Idempotent ingestion of PacifiCorp's public generation interconnection queue pages into Postgres."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["psycopg[binary]>=3.2,<4"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "testcontainers>=4.15,<5",
+    "ruff>=0.6",
+    "mypy>=1.10",
+]
+
+[project.scripts]
+pacificorp-queue = "pacificorp_queue.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pacificorp_queue"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+markers = ["integration: needs a real Postgres (Docker via testcontainers, or PCQ_TEST_DSN)"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["src"]
