@@ -9,9 +9,10 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from html.parser import HTMLParser
 
+from pacificorp_queue.model import QUEUE_ID_RE
+
 _CHARSET_RE = re.compile(rb"charset=[\"']?([\w-]+)", re.IGNORECASE)
 _AS_OF_RE = re.compile(r"as of:?\s*(\S*)", re.IGNORECASE)
-_ROW_ID_RE = re.compile(r"^[A-Z0-9]+-\d+$")
 # The header row is the one containing this cell. It sits at index 2 today, but
 # locating it by content survives a banner row being added or removed.
 _HEADER_MARKER = "request date"
@@ -157,7 +158,7 @@ def parse_page(html: str) -> ParsedPage:
             continue
         # Banner/legend/spacer rows have a different cell count (merged cells).
         # One that starts like a queue id is a data row we failed to read.
-        if row and _ROW_ID_RE.match(row[0]):
+        if row and QUEUE_ID_RE.match(row[0]):
             raise ParseError(
                 f"row {row[0]!r} has {len(row)} cells, header has {len(header)}"
             )

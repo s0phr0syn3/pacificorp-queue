@@ -20,7 +20,7 @@ from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
-from pacificorp_queue.model import QueueEntry
+from pacificorp_queue.model import QUEUE_ID_RE, QueueEntry
 
 
 class NormalizationError(ValueError):
@@ -92,7 +92,6 @@ FUEL_TYPE = {
     )
 } | {"pump storage": "Pumped Storage", "battery": "Battery Storage"}
 
-_QUEUE_ID_RE = re.compile(r"^[A-Z0-9]+-\d+$")
 _FORMER_ID_RE = re.compile(r"^[A-Z0-9]+(-\d+)?$")  # serial ids are bare numbers
 # Matches "Request moved to T2 Cluster" and also
 # "Combined with C4-050, moved to T2 Cluster".
@@ -155,7 +154,7 @@ def _state(s: str) -> str | None:
 
 
 def _queue_number(s: str) -> str:
-    if not _QUEUE_ID_RE.match(s):
+    if not QUEUE_ID_RE.match(s):
         raise ValueError("not a queue number like C4-001")
     return s
 

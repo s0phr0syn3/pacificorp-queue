@@ -2,10 +2,15 @@
 
 import hashlib
 import json
+import re
 from dataclasses import dataclass, fields
 from datetime import date
 from decimal import Decimal
 from typing import Any
+
+# The shape of a queue number such as C4-001. Shared by parse (to spot a data row
+# it failed to read) and normalize (to validate the value).
+QUEUE_ID_RE = re.compile(r"^[A-Z0-9]+-\d+$")
 
 
 @dataclass(frozen=True, slots=True)

@@ -9,6 +9,7 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from importlib.metadata import version
 from importlib.resources import files
 from typing import IO
 from urllib.parse import urlsplit
@@ -26,7 +27,9 @@ PINNED_ROOT_SHA256 = (
 
 # Custom user agent string to identify our requests. Some servers block the
 # default Python user agent.
-USER_AGENT = "pacificorp-queue/0.1 (+interconnection queue ingestion)"
+USER_AGENT = (
+    f"pacificorp-queue/{version('pacificorp-queue')} (+interconnection queue ingestion)"
+)
 
 
 class FetchError(RuntimeError):
