@@ -18,21 +18,25 @@ log = logging.getLogger(__name__)
 # SHA-256 of the OATI WebCARES Root CA certificate in certs/. oasis.oati.com
 # chains to this private root, which is not in public trust stores. We trust it
 # alone (not the system store) and refuse to start if the file does not match.
-# The leaf certificate rotates (the current one expires 2026-12-13), the root
-# does not (valid to 2038), so the root is what we pin.
+# The current leaf certificate expires 2026-12-13, the root expires in 2038.
 PINNED_ROOT_SHA256 = (
     "7A:77:C6:C6:1E:EE:B9:AA:65:C4:EA:41:0D:65:D8:95:"
     "B2:6A:81:12:32:83:00:9D:B1:04:B4:8D:E8:0B:24:79"
 )
+
+# Custom user agent string to identify our requests. Some servers block the
+# default Python user agent.
 USER_AGENT = "pacificorp-queue/0.1 (+interconnection queue ingestion)"
 
 
 class FetchError(RuntimeError):
-    pass
+    """A page could not be downloaded, or the TLS trust setup is wrong."""
 
 
 @dataclass(frozen=True, slots=True)
 class FetchedPage:
+    """A downloaded page: raw bytes plus where and when they came from."""
+
     url: str
     body: bytes  # raw bytes; decoding is parse.py's job
     fetched_at: datetime

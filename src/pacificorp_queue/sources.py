@@ -8,6 +8,8 @@ BASE_URL = "https://www.oasis.oati.com/woa/docs/PPW/PPWdocs/"
 
 @dataclass(frozen=True, slots=True)
 class Source:
+    """One PacifiCorp queue page and how to treat it."""
+
     key: str
     page: str
     description: str
