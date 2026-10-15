@@ -122,8 +122,13 @@ Nothing is dropped quietly:
 
 The schema is one SQL file (`src/pacificorp_queue/migrations/001_initial.sql`) applied
 by a small runner (`schema_migration` table, advisory-locked), the queries are a
-handful of plain statements, and the parser is one short module. That keeps the installation to a single dependency. As the project grows,
-I would consider packages like Alembic, an ORM and pandas.
+handful of plain statements, and the parser is one short module. That keeps the
+installation to a single dependency. As the project grows, I would consider packages
+like Alembic, an ORM and pandas.
+
+All SQL values are bound parameters. The one query with dynamic column names (the
+upsert in `load.py`) is composed with `psycopg.sql`, so no query is built by string
+formatting.
 
 ## Judgment calls
 
