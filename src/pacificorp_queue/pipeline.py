@@ -32,6 +32,14 @@ def ingest_page(
     if not parsed.rows and not source.allow_empty:
         raise IngestError(f"{source.key}: page has no data rows; refusing to load")
 
+    # Rows that do not fit the table are skipped; the count makes a surprise visible.
+    log.info(
+        "source=%s as_of=%s skipped_rows=%d (banner, legend and spacer rows)",
+        source.key,
+        parsed.as_of,
+        parsed.skipped_rows,
+    )
+
     normalized = normalize_rows(source.key, parsed.as_of, parsed.header, parsed.rows)
     for issue in normalized.issues[:_MAX_LOGGED_ISSUES]:
         log.warning(

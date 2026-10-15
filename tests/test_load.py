@@ -245,6 +245,7 @@ def test_cli_migrate_then_load_from_directory(
         assert count(check, "source_load") == 2
     assert "inserted=4" in caplog.text
     assert "unchanged=4" in caplog.text
+    assert "skipped_rows=7" in caplog.text  # the fixture's banner, legend, spacers
 
 
 def test_cli_rejects_a_missing_html_dir_before_touching_the_database(
