@@ -198,6 +198,10 @@ I left alone.
   loaded all 734 rows with no issues, and an immediate second run reported every row
   unchanged.
 - Actions are pinned to major versions, not commit SHAs.
+- Smaller gaps I know about. There is no cap on response size (one trusted host,
+  reached over TLS with a pinned root). The refusal of https-to-http redirects is
+  tested at the redirect handler, not end to end through `fetch_page`. And
+  `ParsedPage.skipped_rows` is recorded by the parser but only read by tests.
 - Python 3.12, 3.13 and 3.14 passed the suite, `ruff` and `mypy --strict` locally against
   Postgres 18 before the CI matrix was added; the matrix is what keeps that true.
 - Other utilities. This tool is scoped to PacifiCorp on purpose. Extending it would take 
@@ -210,4 +214,21 @@ I left alone.
 
 ## AI assistance
 
-This project was written with AI assistance (Claude), as the take-home instructions allow.
+Claude (Anthropic) wrote the code and tests, working from a scope I set: PacifiCorp's
+six queue pages, one runtime dependency, Python 3.12, Postgres 18, and CI. I then
+went through the code file by file.
+
+Review of the generated code found and fixed:
+
+- `fetch_page` did not retry a response body that was cut short, although its
+  docstring said it did. It does now, and a test covers it.
+- Redirects from https to a weaker scheme are refused.
+- `load` printed raw tracebacks for a missing `--html-dir`, an unreachable database
+  and a bundled root CA that fails its fingerprint check. Each is now one logged line
+  and exit code 2.
+- Duplicate source keys are rejected, and `load --help` lists each source with its
+  description.
+
+Beyond the test suite, these were checked directly: the TLS chain with `openssl`, a
+live run against the site, and mutation checks that the tests for the redirect
+refusal and for the bad-root-CA exit fail when the code they cover is removed.
