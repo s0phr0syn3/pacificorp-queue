@@ -24,6 +24,8 @@ class ParseError(ValueError):
 
 @dataclass(frozen=True, slots=True)
 class ParsedPage:
+    """A parsed page: its as-of date, header, and data rows as cleaned cell text."""
+
     as_of: date
     header: tuple[str, ...]
     rows: tuple[tuple[str, ...], ...]
@@ -47,7 +49,13 @@ def decode_html(body: bytes) -> str:
 
 
 class _TableParser(HTMLParser):
+    """Flatten the page's <table> into rows of cleaned cell text.
+
+    Tolerates a missing </td> or </tr>, which Excel exports can contain.
+    """
+
     def __init__(self) -> None:
+        # convert_charrefs: &nbsp; arrives as \xa0, which clean() then strips.
         super().__init__(convert_charrefs=True)
         self.rows: list[list[str]] = []
         self.table_count = 0
@@ -95,6 +103,7 @@ class _TableParser(HTMLParser):
 
 
 def _find_as_of(rows: list[list[str]]) -> date:
+    """The page's one 'As of' date, from the banner rows above the header."""
     found: set[date] = set()
     for row in rows[:_HEADER_SEARCH_ROWS]:
         for i, cell in enumerate(row):
@@ -114,6 +123,11 @@ def _find_as_of(rows: list[list[str]]) -> date:
 
 
 def parse_page(html: str) -> ParsedPage:
+    """Split a page into as-of date, header and data rows.
+
+    Raises ParseError unless there is exactly one table, one as-of date and a
+    header row, or if a row that looks like a queue entry has the wrong width.
+    """
     parser = _TableParser()
     parser.feed(html)
     parser.close()

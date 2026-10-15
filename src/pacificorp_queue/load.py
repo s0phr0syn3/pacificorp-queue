@@ -28,11 +28,13 @@ ON CONFLICT (as_of, queue_number) DO UPDATE SET
 
 
 class LoadError(RuntimeError):
-    pass
+    """Loading would corrupt stored data, so nothing was written."""
 
 
 @dataclass(frozen=True, slots=True)
 class LoadResult:
+    """Row counts for one load; also written to `source_load`."""
+
     source: str
     as_of: date
     rows_parsed: int
@@ -66,6 +68,7 @@ def load_page(
 
     require_idle(conn)
     with conn.transaction():
+        # One writer per source; hashtext() turns the name into the int lock key.
         conn.execute(
             "SELECT pg_advisory_xact_lock(hashtext(%s))",
             (f"pacificorp_queue.load.{source.key}",),
@@ -89,6 +92,7 @@ def load_page(
                 (as_of, source.key),
             ).fetchall()
         )
+        # New rows, plus rows whose content hash differs from the stored one.
         changed = [e for e in entries if existing.get(e.queue_number) != e.content_hash]
         inserted = sum(1 for e in changed if e.queue_number not in existing)
         updated = len(changed) - inserted
@@ -98,6 +102,7 @@ def load_page(
                 {**e.to_record(), "content_hash": e.content_hash} for e in changed
             ]
             conn.execute(_UPSERT, (Jsonb(payload),))
+        # Rows the utility dropped from this as-of date's page.
         deleted = conn.execute(
             "DELETE FROM queue_entry "
             "WHERE as_of = %s AND source = %s AND NOT (queue_number = ANY(%s))",

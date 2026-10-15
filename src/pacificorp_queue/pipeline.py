@@ -11,11 +11,11 @@ from pacificorp_queue.parse import decode_html, parse_page
 from pacificorp_queue.sources import Source
 
 log = logging.getLogger(__name__)
-_MAX_LOGGED_ISSUES = 20
+_MAX_LOGGED_ISSUES = 20  # caps log volume; the full count is in source_load.issues
 
 
 class IngestError(RuntimeError):
-    pass
+    """The page is not safe to load: empty, or (strict) has unrecognized values."""
 
 
 def ingest_page(

@@ -29,6 +29,8 @@ class NormalizationError(ValueError):
 
 @dataclass(frozen=True, slots=True)
 class Issue:
+    """An optional value that could not be read; stored as NULL and reported."""
+
     source: str
     queue_number: str
     field: str
@@ -109,6 +111,8 @@ def _cluster_area(s: str) -> str | None:
 
 
 def _vocab(table: Mapping[str, Any]) -> Callable[[str], Any]:
+    """Parser mapping casefolded text through `table`; unknown text raises."""
+
     def parse(s: str) -> Any:
         if s in TEXT_SENTINELS:
             return None
@@ -130,6 +134,7 @@ def _date(s: str) -> date | None:
 
 
 def _mw(s: str) -> Decimal | None:
+    """Blank is NULL; a literal 0 is a real zero, unlike in text columns."""
     if s == "":
         return None
     try:
@@ -179,6 +184,8 @@ def _flag(true_text: str) -> Callable[[str], bool]:
 
 @dataclass(frozen=True, slots=True)
 class Field:
+    """How one `QueueEntry` attribute is read: accepted headers plus a parser."""
+
     name: str  # QueueEntry attribute
     headers: tuple[str, ...]  # accepted spellings of the page's column header
     parse: Callable[[str], Any]
@@ -207,6 +214,7 @@ FIELDS: tuple[Field, ...] = (
     Field("company_name", ("Company Name",), _text),
     Field("service_type", ("Service Type",), _vocab(SERVICE_TYPE)),
     Field("application_rules", ("Application Rules",), _vocab(APPLICATION_RULES)),
+    # An unknown spelling raises KeyError, which normalize_rows treats as bad data.
     Field(
         "qualifying_facility",
         ("Qualifying Facility",),
@@ -257,11 +265,14 @@ def resolve_columns(header: Sequence[str]) -> dict[str, int]:
 
 @dataclass(frozen=True, slots=True)
 class NormalizedPage:
+    """Entries ready to load, plus the optional values that were unreadable."""
+
     entries: list[QueueEntry]
     issues: list[Issue]
 
 
 def _moved_to(explanation: str | None) -> str | None:
+    """Target cluster when a 'Withdrawn' row is really a transfer, else None."""
     match = _MOVED_RE.search(explanation) if explanation else None
     return match.group(1) if match else None
 
@@ -269,6 +280,11 @@ def _moved_to(explanation: str | None) -> str | None:
 def normalize_rows(
     source: str, as_of: date, header: Sequence[str], rows: Sequence[Sequence[str]]
 ) -> NormalizedPage:
+    """Turn parsed rows into entries, applying the policy in the module docstring.
+
+    Raises NormalizationError for unknown headers, unusable required values and
+    duplicate queue numbers.
+    """
     if not rows:
         return NormalizedPage([], [])
     columns = resolve_columns(header)
@@ -286,7 +302,7 @@ def normalize_rows(
             cell = row[columns[f.name]]
             try:
                 value = f.parse(cell)
-            except (ValueError, KeyError) as exc:
+            except (ValueError, KeyError) as exc:  # KeyError: qualifying_facility
                 if f.required:
                     raise NormalizationError(
                         f"{row_id}: {f.name} {cell!r}: {exc}"

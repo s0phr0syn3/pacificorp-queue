@@ -17,6 +17,7 @@ log = logging.getLogger("pacificorp_queue")
 
 
 def _parser() -> argparse.ArgumentParser:
+    """`migrate` and `load` subcommands; both take --dsn."""
     parser = argparse.ArgumentParser(prog="pacificorp-queue", description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -57,11 +58,13 @@ def _parser() -> argparse.ArgumentParser:
 
 
 def _read_local(source: Source, directory: Path) -> FetchedPage:
+    """Offline mode: read <key>.html from `directory` instead of the network."""
     body = (directory / f"{source.key}.html").read_bytes()
     return FetchedPage(url=source.url, body=body, fetched_at=datetime.now(UTC))
 
 
 def _missing_pages(selected: list[Source], directory: Path) -> list[Path]:
+    """Pages offline mode needs that `directory` does not contain."""
     return [
         path
         for source in selected
@@ -70,6 +73,7 @@ def _missing_pages(selected: list[Source], directory: Path) -> list[Path]:
 
 
 def _connect(dsn: str) -> psycopg.Connection | None:
+    """Autocommit connection (see guard.require_idle), or None after logging why not."""
     try:
         return psycopg.connect(dsn, autocommit=True)
     except psycopg.OperationalError as exc:
@@ -78,6 +82,7 @@ def _connect(dsn: str) -> psycopg.Connection | None:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Exit code: 0 ok, 1 a source failed, 2 bad usage or no database."""
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s"
     )
@@ -89,7 +94,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "migrate":
         if (conn := _connect(args.dsn)) is None:
             return 2
-        with conn:
+        with conn:  # closes the connection on exit
             applied = migrate(conn)
         log.info("migrations applied: %s", applied or "none (up to date)")
         return 0
@@ -112,10 +117,10 @@ def main(argv: list[str] | None = None) -> int:
                 if args.html_dir:
                     fetched = _read_local(source, args.html_dir)
                 else:
-                    assert context is not None
+                    assert context is not None  # only None in offline mode
                     fetched = fetch_page(source.url, context)
                 result = ingest_page(conn, source, fetched, strict=args.strict)
-            except Exception:
+            except Exception:  # deliberate: one bad page must not stop the others
                 failures += 1
                 log.exception("source=%s failed", source.key)
                 continue

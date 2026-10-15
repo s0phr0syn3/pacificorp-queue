@@ -45,6 +45,7 @@ class FetchedPage:
 
     @property
     def sha256(self) -> str:
+        """Content fingerprint, recorded in `source_load`."""
         return hashlib.sha256(self.body).hexdigest()
 
 

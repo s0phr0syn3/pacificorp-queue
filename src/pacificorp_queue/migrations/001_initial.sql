@@ -12,6 +12,7 @@ CREATE TABLE queue_entry (
     former_queue_numbers       text[]      NOT NULL DEFAULT '{}',
     -- NOTE: the utility resets this when a request transfers to a new cluster.
     request_date               date        NOT NULL,
+    -- Keep in step with STATUS in normalize.py.
     status                     text        NOT NULL
         CHECK (status IN ('withdrawn', 'in_progress', 'suspended', 'in_service')),
     status_explanation         text,
@@ -32,7 +33,9 @@ CREATE TABLE queue_entry (
     fuel_type                  text,
     facilities_study_available boolean,
     schedule_deviation_flagged boolean,
+    -- The page's own header -> cell text, untouched.
     raw                        jsonb       NOT NULL,
+    -- sha256 of every column above; a changed hash means the row is rewritten.
     content_hash               text        NOT NULL,
     created_at                 timestamptz NOT NULL DEFAULT now(),
     updated_at                 timestamptz NOT NULL DEFAULT now(),

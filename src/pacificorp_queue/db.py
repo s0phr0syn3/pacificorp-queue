@@ -1,4 +1,4 @@
-"""Connection and schema migration helpers."""
+"""Schema migrations."""
 
 from importlib.resources import files
 
@@ -39,6 +39,7 @@ def migrate(conn: psycopg.Connection) -> list[str]:
             version = path.name.removesuffix(".sql")
             if version in done:
                 continue
+            # bytes, not str: psycopg's type hints only accept literal str queries.
             conn.execute(path.read_text("utf-8").encode())
             conn.execute(
                 "INSERT INTO schema_migration (version) VALUES (%s)", (version,)
