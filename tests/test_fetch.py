@@ -1,6 +1,10 @@
+import http.client
 import http.server
+import io
 import ssl
 import threading
+import urllib.error
+import urllib.request
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 
@@ -87,9 +91,10 @@ def test_server_errors_are_retried(server: _Server) -> None:
 
 def test_persistent_server_errors_give_up_loudly(server: _Server) -> None:
     server.responses = [(500, b"")]
-    with pytest.raises(FetchError, match="gave up after 3 attempts"):
+    with pytest.raises(FetchError, match="gave up after 3 attempts") as caught:
         fetch_page(server.url, build_ssl_context(), backoff=0)
     assert server.hits == 3
+    assert isinstance(caught.value.__cause__, urllib.error.HTTPError)  # chained
 
 
 def test_client_errors_are_not_retried(server: _Server) -> None:
@@ -112,3 +117,22 @@ def test_persistently_truncated_bodies_give_up_loudly(server: _Server) -> None:
     server.short_responses = 99
     with pytest.raises(FetchError, match="gave up after 3 attempts"):
         fetch_page(server.url, build_ssl_context(), backoff=0)
+
+
+def _redirect(from_url: str, to_url: str) -> urllib.request.Request | None:
+    handler = fetch._RefuseHttpsDowngrade()
+    request = urllib.request.Request(from_url)
+    return handler.redirect_request(
+        request, io.BytesIO(), 302, "Found", http.client.HTTPMessage(), to_url
+    )
+
+
+def test_https_to_http_redirect_is_refused() -> None:
+    with pytest.raises(FetchError, match="refusing redirect"):
+        _redirect("https://a.example/x", "http://a.example/x")
+
+
+def test_https_to_https_redirect_is_followed() -> None:
+    followed = _redirect("https://a.example/x", "https://b.example/y")
+    assert followed is not None
+    assert followed.full_url == "https://b.example/y"
