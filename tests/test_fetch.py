@@ -32,6 +32,7 @@ class _Server:
     url: str
     responses: list[tuple[int, bytes]]
     hits: int = 0
+    short_responses: int = 0  # first N responses are cut off mid-body
     lock: threading.Lock = field(default_factory=threading.Lock)
 
 
@@ -45,13 +46,16 @@ def server() -> Iterator[_Server]:
                 status, body = state.responses[
                     min(state.hits, len(state.responses) - 1)
                 ]
+                cut_short = state.hits < state.short_responses
                 state.hits += 1
             self.send_response(status)
-            self.send_header("Content-Length", str(len(body)))
+            # Promise 10 more bytes than we send, then hang up.
+            self.send_header("Content-Length", str(len(body) + 10 * cut_short))
             self.send_header("Last-Modified", "Mon, 14 Sep 2026 18:00:52 GMT")
             self.send_header("ETag", '"abc"')
             self.end_headers()
             self.wfile.write(body)
+            self.close_connection = True
 
         def log_message(self, *args: object) -> None:
             pass
@@ -93,3 +97,18 @@ def test_client_errors_are_not_retried(server: _Server) -> None:
     with pytest.raises(FetchError, match="HTTP 404"):
         fetch_page(server.url, build_ssl_context(), backoff=0)
     assert server.hits == 1
+
+
+def test_truncated_bodies_are_retried(server: _Server) -> None:
+    server.responses = [(200, b"complete")]
+    server.short_responses = 2
+    page = fetch_page(server.url, build_ssl_context(), backoff=0)
+    assert page.body == b"complete"
+    assert server.hits == 3
+
+
+def test_persistently_truncated_bodies_give_up_loudly(server: _Server) -> None:
+    server.responses = [(200, b"complete")]
+    server.short_responses = 99
+    with pytest.raises(FetchError, match="gave up after 3 attempts"):
+        fetch_page(server.url, build_ssl_context(), backoff=0)

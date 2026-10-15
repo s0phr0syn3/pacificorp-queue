@@ -1,6 +1,7 @@
 """Download a page over TLS, trusting only OATI's own root CA."""
 
 import hashlib
+import http.client
 import logging
 import ssl
 import time
@@ -77,12 +78,7 @@ def fetch_page(
     for attempt in range(1, attempts + 1):
         try:
             with urllib.request.urlopen(request, context=context, timeout=timeout) as r:
-                body = r.read()
-                expected = r.headers.get("Content-Length")
-                if expected is not None and int(expected) != len(body):
-                    raise FetchError(
-                        f"truncated body: got {len(body)} of {expected} bytes"
-                    )
+                body = r.read()  # raises IncompleteRead if the body is cut short
                 return FetchedPage(
                     url=url,
                     body=body,
@@ -100,7 +96,7 @@ def fetch_page(
                     f"{url}: TLS verification failed: {exc.reason}"
                 ) from exc
             last_error = exc
-        except (TimeoutError, ConnectionError, FetchError) as exc:
+        except (TimeoutError, ConnectionError, http.client.HTTPException) as exc:
             last_error = exc
         log.warning(
             "fetch failed url=%s attempt=%d/%d error=%s",
