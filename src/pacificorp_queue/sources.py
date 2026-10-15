@@ -1,5 +1,6 @@
 """The PacifiCorp OASIS pages this tool knows how to ingest."""
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 
 BASE_URL = "https://www.oasis.oati.com/woa/docs/PPW/PPWdocs/"
@@ -19,9 +20,19 @@ class Source:
         return BASE_URL + self.page
 
 
-SOURCES: dict[str, Source] = {
-    s.key: s
-    for s in (
+def index_by_key(sources: Iterable[Source]) -> dict[str, Source]:
+    """Key sources by `Source.key`, refusing duplicates instead of letting the
+    later one silently replace the earlier."""
+    index: dict[str, Source] = {}
+    for source in sources:
+        if source.key in index:
+            raise ValueError(f"duplicate source key: {source.key!r}")
+        index[source.key] = source
+    return index
+
+
+SOURCES: dict[str, Source] = index_by_key(
+    (
         Source("tc1", "pacificorpcliaq.htm", "Transition Cluster"),
         Source("cs1", "pacificorpcliaq1.htm", "Cluster 1"),
         Source("cs2", "pacificorpcliaq2.htm", "Cluster 2"),
@@ -35,4 +46,4 @@ SOURCES: dict[str, Source] = {
             allow_empty=True,
         ),
     )
-}
+)

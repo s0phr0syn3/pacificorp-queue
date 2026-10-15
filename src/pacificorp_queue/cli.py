@@ -29,7 +29,13 @@ def _parser() -> argparse.ArgumentParser:
 
     add_dsn(sub.add_parser("migrate", help="create or upgrade the schema"))
 
-    load = sub.add_parser("load", help="fetch pages and load them")
+    load = sub.add_parser(
+        "load",
+        help="fetch pages and load them",
+        epilog="sources:\n"
+        + "\n".join(f"  {s.key:<4} {s.description}" for s in SOURCES.values()),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     add_dsn(load)
     load.add_argument(
         "--source",
